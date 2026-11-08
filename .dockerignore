@@ -1,0 +1,6 @@
+.git
+.env
+__pycache__/
+*.py[cod]
+app/core/firebase_admin_credentials.json
+*adminsdk*.json
