@@ -27,6 +27,7 @@ export const projectCreateSchema = z.object({
   status: z.enum(["DRAFT", "PUBLISHED"]).default("DRAFT"),
 });
 export const projectUpdateSchema = projectCreateSchema.partial()
+  .extend({ status: z.enum(["DRAFT", "PUBLISHED", "CLOSED"]).optional() })
   .refine((value) => Object.keys(value).length > 0, "Indica un dato para actualizar.");
 
 export const investmentRequestListSchema = z.object(pageFields);

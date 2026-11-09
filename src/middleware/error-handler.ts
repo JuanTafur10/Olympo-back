@@ -45,6 +45,15 @@ export const errorHandler: ErrorRequestHandler = (error, _request, response, _ne
       response.status(409).json({ error: { message: "El registro está relacionado con otros datos." } });
       return;
     }
+    if (error.code === "P2023") {
+      response.status(400).json({ error: { message: "El identificador enviado no tiene un formato válido." } });
+      return;
+    }
+  }
+
+  if (error instanceof SyntaxError && "status" in error && error.status === 400) {
+    response.status(400).json({ error: { message: "El cuerpo de la solicitud no es JSON válido." } });
+    return;
   }
 
   const message = error instanceof Error ? error.message : "Error interno del servidor.";

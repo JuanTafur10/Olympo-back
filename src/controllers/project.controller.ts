@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { RequestHandler } from "express";
+import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../config/database.js";
 import { HttpError } from "../errors/http-error.js";
 import { uploadProjectImageFile } from "../services/storage.service.js";
@@ -21,7 +22,7 @@ export const listProjects: RequestHandler = async (request, response) => {
     : request.user?.role === "OWNER"
       ? { OR: [{ status: "PUBLISHED" as const }, { ownerId: request.user.id }] }
       : { status: "PUBLISHED" as const };
-  const where = {
+  const where: Prisma.ProjectWhereInput = {
     AND: [
       visibility,
       search,

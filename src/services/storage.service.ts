@@ -21,9 +21,19 @@ const extensionByType: Record<string, string> = {
   "image/webp": "webp",
 };
 
+const matchesFileSignature = (file: Express.Multer.File) => {
+  const bytes = file.buffer;
+  if (file.mimetype === "image/jpeg") return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (file.mimetype === "image/png") return bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  if (file.mimetype === "image/webp") {
+    return bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP";
+  }
+  return false;
+};
+
 export const uploadProjectImageFile = async (projectId: string, file: Express.Multer.File) => {
   const extension = extensionByType[file.mimetype];
-  if (!extension) throw new HttpError(400, "Usa una imagen JPG, PNG o WEBP.");
+  if (!extension || !matchesFileSignature(file)) throw new HttpError(400, "El archivo debe ser una imagen JPG, PNG o WEBP válida.");
 
   const objectPath = "projects/" + projectId + "/" + randomUUID() + "." + extension;
   const storage = getStorageClient().storage.from(env.SUPABASE_STORAGE_BUCKET);

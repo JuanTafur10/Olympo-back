@@ -1,4 +1,5 @@
 import type { RequestHandler } from "express";
+import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../config/database.js";
 import { HttpError } from "../errors/http-error.js";
 import { paginationFromQuery } from "../utils/pagination.js";
@@ -9,7 +10,7 @@ import {
 
 export const listInvestmentRequests: RequestHandler = async (request, response) => {
   const pagination = paginationFromQuery(request.query);
-  const where = request.user!.role === "ADMIN"
+  const where: Prisma.InvestmentRequestWhereInput = request.user!.role === "ADMIN"
     ? {}
     : request.user!.role === "OWNER"
       ? { project: { ownerId: request.user!.id } }
@@ -75,7 +76,7 @@ export const updateInvestmentRequest: RequestHandler = async (request, response)
   const isProjectOwner = current.project.ownerId === request.user!.id;
   if (!isAdmin && !isInvestor && !isProjectOwner) throw new HttpError(403, "No tienes permiso para cambiar esta solicitud.");
 
-  let data: typeof input & { reviewerId?: string };
+  let data: Prisma.InvestmentRequestUncheckedUpdateInput;
   if (isAdmin) {
     data = { ...input, ...(input.status ? { reviewerId: request.user!.id } : {}) };
   } else if (isProjectOwner) {
@@ -84,10 +85,15 @@ export const updateInvestmentRequest: RequestHandler = async (request, response)
     }
     data = { status: input.status, reviewerId: request.user!.id };
   } else {
-    if (current.status !== "PENDING" || input.status || (!input.amount && input.message === undefined)) {
-      throw new HttpError(400, "Solo puedes editar el monto o mensaje de una solicitud pendiente.");
+    if (
+      current.status !== "PENDING"
+      || (input.status && input.status !== "WITHDRAWN")
+      || (input.status === "WITHDRAWN" && (input.amount !== undefined || input.message !== undefined))
+      || (!input.status && input.amount === undefined && input.message === undefined)
+    ) {
+      throw new HttpError(400, "Solo puedes editar una solicitud pendiente o retirarla.");
     }
-    data = { amount: input.amount, message: input.message };
+    data = { amount: input.amount, message: input.message, status: input.status };
   }
 
   const item = await prisma.investmentRequest.update({
