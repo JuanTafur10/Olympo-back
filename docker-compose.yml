@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: olympo
+      POSTGRES_USER: olympo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-olympo_local}
+    ports:
+      - "5432:5432"
+    volumes:
+      - olympo_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U olympo -d olympo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://olympo:${POSTGRES_PASSWORD:-olympo_local}@db:5432/olympo?schema=public
+      DIRECT_URL: postgresql://olympo:${POSTGRES_PASSWORD:-olympo_local}@db:5432/olympo?schema=public
+    ports:
+      - "4000:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  olympo_postgres:

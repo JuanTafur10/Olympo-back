@@ -1,6 +1,10 @@
 .git
 .env
-__pycache__/
+.env.*
+!.env.example
+node_modules
+dist
+coverage
+src/generated/prisma
+__pycache__
 *.py[cod]
-app/core/firebase_admin_credentials.json
-*adminsdk*.json
