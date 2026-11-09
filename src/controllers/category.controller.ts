@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { RequestHandler } from "express";
+import { getRouteParam } from "../utils/route-param.js";
 import { prisma } from "../config/database.js";
 import { HttpError } from "../errors/http-error.js";
 import { paginationFromQuery } from "../utils/pagination.js";
@@ -30,7 +31,7 @@ export const listCategories: RequestHandler = async (request, response) => {
 
 export const getCategory: RequestHandler = async (request, response) => {
   const category = await prisma.category.findFirst({
-    where: { id: request.params.id, status: "ACTIVE" },
+    where: { id: getRouteParam(request, "id"), status: "ACTIVE" },
   });
   if (!category) throw new HttpError(404, "No se encontró la categoría.");
   response.json({ data: category });
@@ -47,11 +48,11 @@ export const createCategory: RequestHandler = async (request, response) => {
 export const updateCategory: RequestHandler = async (request, response) => {
   const input = categoryUpdateSchema.parse(request.body);
   const current = await prisma.category.findFirst({
-    where: { id: request.params.id, status: "ACTIVE" },
+    where: { id: getRouteParam(request, "id"), status: "ACTIVE" },
   });
   if (!current) throw new HttpError(404, "No se encontró la categoría.");
   const category = await prisma.category.update({
-    where: { id: request.params.id },
+    where: { id: getRouteParam(request, "id") },
     data: {
       ...input,
       ...(input.name ? { slug: slugFor(input.name) } : {}),
@@ -62,7 +63,7 @@ export const updateCategory: RequestHandler = async (request, response) => {
 
 export const deleteCategory: RequestHandler = async (request, response) => {
   const category = await prisma.category.findFirst({
-    where: { id: request.params.id, status: "ACTIVE" },
+    where: { id: getRouteParam(request, "id"), status: "ACTIVE" },
   });
   if (!category) throw new HttpError(404, "No se encontró la categoría.");
   const projectCount = await prisma.project.count({

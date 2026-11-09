@@ -1,4 +1,5 @@
 import type { RequestHandler } from "express";
+import { getRouteParam } from "../utils/route-param.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../config/database.js";
 import { HttpError } from "../errors/http-error.js";
@@ -39,7 +40,7 @@ export const listInvestmentRequests: RequestHandler = async (request, response) 
 
 export const getInvestmentRequest: RequestHandler = async (request, response) => {
   const item = await prisma.investmentRequest.findUnique({
-    where: { id: request.params.id },
+    where: { id: getRouteParam(request, "id") },
     include: {
       project: { select: { id: true, title: true, imageUrl: true, ownerId: true } },
       investor: { select: { id: true, name: true } },
@@ -69,7 +70,7 @@ export const createInvestmentRequest: RequestHandler = async (request, response)
 export const updateInvestmentRequest: RequestHandler = async (request, response) => {
   const input = investmentRequestUpdateSchema.parse(request.body);
   const current = await prisma.investmentRequest.findUnique({
-    where: { id: request.params.id },
+    where: { id: getRouteParam(request, "id") },
     include: { project: { select: { ownerId: true } } },
   });
   if (!current || current.status === "DELETED") throw new HttpError(404, "No se encontró la solicitud.");
@@ -106,7 +107,7 @@ export const updateInvestmentRequest: RequestHandler = async (request, response)
   }
 
   const item = await prisma.investmentRequest.update({
-    where: { id: request.params.id },
+    where: { id: getRouteParam(request, "id") },
     data,
     include: { project: { select: { id: true, title: true } } },
   });
@@ -115,7 +116,7 @@ export const updateInvestmentRequest: RequestHandler = async (request, response)
 
 export const deleteInvestmentRequest: RequestHandler = async (request, response) => {
   const current = await prisma.investmentRequest.findUnique({
-    where: { id: request.params.id },
+    where: { id: getRouteParam(request, "id") },
     include: { project: { select: { ownerId: true } } },
   });
   if (!current || current.status === "DELETED") throw new HttpError(404, "No se encontró la solicitud.");
@@ -124,7 +125,7 @@ export const deleteInvestmentRequest: RequestHandler = async (request, response)
     || (current.investorId === request.user!.id && current.status === "PENDING");
   if (!canDelete) throw new HttpError(403, "No tienes permiso para eliminar esta solicitud.");
   await prisma.investmentRequest.update({
-    where: { id: request.params.id },
+    where: { id: getRouteParam(request, "id") },
     data: { status: "DELETED" },
   });
   response.status(204).send();
