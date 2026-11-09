@@ -15,12 +15,12 @@ El administrador no se crea desde el formulario. Se crea una sola vez con el see
 
 1. Copia .env.example como .env.
 2. Define JWT_SECRET con una cadena aleatoria de al menos 32 caracteres.
-3. Define ADMIN_PASSWORD con una contraseña de al menos 12 caracteres.
+3. Define ADMIN_PASSWORD y SEED_USER_PASSWORD con contraseñas distintas de al menos 12 caracteres.
 4. Inicia PostgreSQL con docker compose up -d db.
 5. Instala los paquetes con npm install.
 6. Genera el cliente de Prisma con npm run db:generate.
 7. Aplica las tablas con npm run db:deploy.
-8. Crea el administrador y las categorías iniciales con npm run db:seed.
+8. Crea el administrador, un usuario normal y las categorías iniciales con npm run db:seed.
 9. Inicia la API con npm run dev.
 
 La API queda disponible en http://localhost:4000/api/v1. El endpoint GET /health permite revisar que el servidor responda.
@@ -46,6 +46,7 @@ Para crear un proyecto, envía JSON con title, description, categoryId y targetA
 - OWNER: crea y administra sus proyectos; revisa las solicitudes recibidas para esos proyectos.
 - USER: explora proyectos y administra sus propias solicitudes de inversión.
 - El registro permite escoger USER u OWNER; nunca permite crear ADMIN.
+- Al eliminar, los registros cambian de estado y se conservan en la base de datos.
 
 ## Supabase Storage
 
