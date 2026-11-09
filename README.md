@@ -58,7 +58,7 @@ Crea un bucket llamado projects o usa otro nombre en SUPABASE_STORAGE_BUCKET. El
 
 ## Despliegue
 
-El contenedor usa las variables de .env y ejecuta las migraciones antes de iniciar la API. En un proveedor como Render o Railway, configura el build como npm ci && npm run build y el inicio como npm run db:deploy && npm start. Añade allí DATABASE_URL, DIRECT_URL, JWT_SECRET, CORS_ORIGIN y las variables de Supabase. Ejecuta npm run db:seed una vez con las variables ADMIN_EMAIL y ADMIN_PASSWORD para crear el administrador.
+El contenedor usa las variables de .env y ejecuta las migraciones antes de iniciar la API. En un proveedor como Render o Railway, configura el build como npm ci && npm run build y el inicio como npm run db:deploy && npm start. Añade allí DATABASE_URL, DIRECT_URL, JWT_SECRET, CORS_ORIGIN y las variables de Supabase. Ejecuta npm run db:seed una vez con ADMIN_EMAIL, ADMIN_PASSWORD, SEED_USER_EMAIL y SEED_USER_PASSWORD para crear el administrador y el usuario normal.
 
 ## Reparto del trabajo
 
