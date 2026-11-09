@@ -25,6 +25,10 @@ El administrador no se crea desde el formulario. Se crea una sola vez con el see
 
 La API queda disponible en http://localhost:4000/api/v1. El endpoint GET /health permite revisar que el servidor responda.
 
+## PostgreSQL alojado
+
+El ejemplo de .env usa PostgreSQL local. Para usar Neon, Supabase o Railway, configura en las variables privadas del servicio la URL real de PostgreSQL. DATABASE_URL se usa para las consultas de la API y DIRECT_URL para ejecutar las migraciones. Si el proveedor ofrece un pooler, usa la conexión directa en DIRECT_URL y la conexión del pooler en DATABASE_URL.
+
 ## Rutas principales
 
 | Recurso | Rutas |
