@@ -18,7 +18,7 @@ El administrador no se crea desde el formulario. Se crea una sola vez con el see
 3. Define ADMIN_PASSWORD con una contraseña de al menos 12 caracteres.
 4. Inicia PostgreSQL con docker compose up -d db.
 5. Instala los paquetes con npm install.
-6. Crea las tablas con npm run db:migrate -- --name inicio.
+6. Aplica las tablas con npm run db:deploy.
 7. Crea el administrador y las categorías iniciales con npm run db:seed.
 8. Inicia la API con npm run dev.
 
