@@ -23,7 +23,7 @@ El administrador no se crea desde el formulario. Se crea una sola vez con el see
 8. Crea el administrador, un usuario normal y las categorías iniciales con npm run db:seed.
 9. Inicia la API con npm run dev.
 
-La API queda disponible en http://localhost:4000/api/v1. El endpoint GET /health permite revisar que el servidor responda.
+En local, la API queda disponible en http://localhost:4000. Las rutas están bajo /api/v1 y también bajo /api para compatibilidad con los endpoints de autenticación de la rúbrica. El endpoint GET /api/v1/health permite revisar que el servidor responda.
 
 ## PostgreSQL alojado
 
