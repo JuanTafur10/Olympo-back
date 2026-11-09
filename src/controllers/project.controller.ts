@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { RequestHandler } from "express";
 import { prisma } from "../config/database.js";
 import { HttpError } from "../errors/http-error.js";
+import { uploadProjectImageFile } from "../services/storage.service.js";
 import { paginationFromQuery } from "../utils/pagination.js";
 import { projectCreateSchema, projectListSchema, projectUpdateSchema } from "../validation/domain.schemas.js";
 
@@ -104,6 +105,18 @@ export const deleteProject: RequestHandler = async (request, response) => {
   await getEditableProject(request.params.id, request.user!.id, request.user!.role);
   await prisma.project.delete({ where: { id: request.params.id } });
   response.status(204).send();
+};
+
+export const uploadProjectImage: RequestHandler = async (request, response) => {
+  if (!request.file) throw new HttpError(400, "Adjunta el archivo en el campo image.");
+  await getEditableProject(request.params.id, request.user!.id, request.user!.role);
+  const imageUrl = await uploadProjectImageFile(request.params.id, request.file);
+  const project = await prisma.project.update({
+    where: { id: request.params.id },
+    data: { imageUrl },
+    include: { category: true },
+  });
+  response.json({ data: project });
 };
 
 export const requireProjectOwner = getEditableProject;

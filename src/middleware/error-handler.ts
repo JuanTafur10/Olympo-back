@@ -1,5 +1,6 @@
 import type { ErrorRequestHandler } from "express";
 import { Prisma } from "../generated/prisma/client.js";
+import { MulterError } from "multer";
 import { ZodError } from "zod";
 import { HttpError } from "../errors/http-error.js";
 
@@ -20,6 +21,13 @@ export const errorHandler: ErrorRequestHandler = (error, _request, response, _ne
           message: issue.message,
         })),
       },
+    });
+    return;
+  }
+
+  if (error instanceof MulterError) {
+    response.status(error.code === "LIMIT_FILE_SIZE" ? 413 : 400).json({
+      error: { message: error.code === "LIMIT_FILE_SIZE" ? "La imagen supera el máximo de 5 MB." : "No se pudo procesar el archivo." },
     });
     return;
   }
