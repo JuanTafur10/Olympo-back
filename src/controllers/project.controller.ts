@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { RequestHandler } from "express";
+import { getRouteParam } from "../utils/route-param.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../config/database.js";
 import { HttpError } from "../errors/http-error.js";
@@ -54,7 +55,7 @@ export const listProjects: RequestHandler = async (request, response) => {
 
 export const getProject: RequestHandler = async (request, response) => {
   const project = await prisma.project.findUnique({
-    where: { id: request.params.id },
+    where: { id: getRouteParam(request, "id") },
     include: { category: true, owner: { select: { id: true, name: true } } },
   });
   if (!project || project.status === "DELETED") throw new HttpError(404, "No se encontró el proyecto.");
@@ -92,9 +93,9 @@ const getEditableProject = async (projectId: string, userId: string, role: strin
 
 export const updateProject: RequestHandler = async (request, response) => {
   const input = projectUpdateSchema.parse(request.body);
-  await getEditableProject(request.params.id, request.user!.id, request.user!.role);
+  await getEditableProject(getRouteParam(request, "id"), request.user!.id, request.user!.role);
   const project = await prisma.project.update({
-    where: { id: request.params.id },
+    where: { id: getRouteParam(request, "id") },
     data: {
       ...input,
       ...(input.title ? { slug: slugFor(input.title) } : {}),
@@ -105,14 +106,14 @@ export const updateProject: RequestHandler = async (request, response) => {
 };
 
 export const deleteProject: RequestHandler = async (request, response) => {
-  await getEditableProject(request.params.id, request.user!.id, request.user!.role);
+  await getEditableProject(getRouteParam(request, "id"), request.user!.id, request.user!.role);
   await prisma.$transaction(async (transaction) => {
     await transaction.investmentRequest.updateMany({
-      where: { projectId: request.params.id, status: { not: "DELETED" } },
+      where: { projectId: getRouteParam(request, "id"), status: { not: "DELETED" } },
       data: { status: "DELETED" },
     });
     await transaction.project.update({
-      where: { id: request.params.id },
+      where: { id: getRouteParam(request, "id") },
       data: { status: "DELETED" },
     });
   });
@@ -121,10 +122,10 @@ export const deleteProject: RequestHandler = async (request, response) => {
 
 export const uploadProjectImage: RequestHandler = async (request, response) => {
   if (!request.file) throw new HttpError(400, "Adjunta el archivo en el campo image.");
-  await getEditableProject(request.params.id, request.user!.id, request.user!.role);
-  const imageUrl = await uploadProjectImageFile(request.params.id, request.file);
+  await getEditableProject(getRouteParam(request, "id"), request.user!.id, request.user!.role);
+  const imageUrl = await uploadProjectImageFile(getRouteParam(request, "id"), request.file);
   const project = await prisma.project.update({
-    where: { id: request.params.id },
+    where: { id: getRouteParam(request, "id") },
     data: { imageUrl },
     include: { category: true },
   });
