@@ -45,7 +45,7 @@ export const register: RequestHandler = async (request, response) => {
 export const login: RequestHandler = async (request, response) => {
   const input = loginSchema.parse(request.body);
   const user = await prisma.user.findUnique({ where: { email: input.email } });
-  if (!user || !(await bcrypt.compare(input.password, user.passwordHash))) {
+  if (!user || user.status !== "ACTIVE" || !(await bcrypt.compare(input.password, user.passwordHash))) {
     throw new HttpError(401, "El correo o la contraseña no son correctos.");
   }
 

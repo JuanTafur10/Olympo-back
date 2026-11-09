@@ -24,6 +24,7 @@ export const listProjects: RequestHandler = async (request, response) => {
       : { status: "PUBLISHED" as const };
   const where: Prisma.ProjectWhereInput = {
     AND: [
+      { status: { not: "DELETED" } },
       visibility,
       search,
       ...(filters.categoryId ? [{ categoryId: filters.categoryId }] : []),
@@ -56,7 +57,7 @@ export const getProject: RequestHandler = async (request, response) => {
     where: { id: request.params.id },
     include: { category: true, owner: { select: { id: true, name: true } } },
   });
-  if (!project) throw new HttpError(404, "No se encontró el proyecto.");
+  if (!project || project.status === "DELETED") throw new HttpError(404, "No se encontró el proyecto.");
   const canSeeDraft = request.user?.role === "ADMIN"
     || (request.user?.role === "OWNER" && request.user.id === project.ownerId);
   if (project.status !== "PUBLISHED" && !canSeeDraft) {
@@ -82,6 +83,7 @@ export const createProject: RequestHandler = async (request, response) => {
 const getEditableProject = async (projectId: string, userId: string, role: string) => {
   const project = await prisma.project.findUnique({ where: { id: projectId } });
   if (!project) throw new HttpError(404, "No se encontró el proyecto.");
+  if (project.status === "DELETED") throw new HttpError(404, "No se encontró el proyecto.");
   if (role !== "ADMIN" && project.ownerId !== userId) {
     throw new HttpError(403, "Solo puedes gestionar los proyectos que creaste.");
   }
@@ -104,7 +106,16 @@ export const updateProject: RequestHandler = async (request, response) => {
 
 export const deleteProject: RequestHandler = async (request, response) => {
   await getEditableProject(request.params.id, request.user!.id, request.user!.role);
-  await prisma.project.delete({ where: { id: request.params.id } });
+  await prisma.$transaction(async (transaction) => {
+    await transaction.investmentRequest.updateMany({
+      where: { projectId: request.params.id, status: { not: "DELETED" } },
+      data: { status: "DELETED" },
+    });
+    await transaction.project.update({
+      where: { id: request.params.id },
+      data: { status: "DELETED" },
+    });
+  });
   response.status(204).send();
 };
 

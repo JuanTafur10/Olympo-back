@@ -27,9 +27,9 @@ const findUserFromToken = async (token: string) => {
 
   const user = await prisma.user.findUnique({
     where: { id: payload.sub },
-    select: { id: true, role: true },
+    select: { id: true, role: true, status: true },
   });
-  if (!user) throw new HttpError(401, "La sesión ya no está activa.");
+  if (!user || user.status !== "ACTIVE") throw new HttpError(401, "La sesión ya no está activa.");
   return user;
 };
 

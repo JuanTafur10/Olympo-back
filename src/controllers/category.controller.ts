@@ -11,9 +11,11 @@ const slugFor = (name: string) =>
 
 export const listCategories: RequestHandler = async (request, response) => {
   const pagination = paginationFromQuery(request.query);
+  const where = { status: "ACTIVE" as const };
   const [total, data] = await Promise.all([
-    prisma.category.count(),
+    prisma.category.count({ where }),
     prisma.category.findMany({
+      where,
       include: { _count: { select: { projects: true } } },
       orderBy: { name: "asc" },
       skip: (pagination.currentPage - 1) * pagination.limit,
@@ -27,7 +29,9 @@ export const listCategories: RequestHandler = async (request, response) => {
 };
 
 export const getCategory: RequestHandler = async (request, response) => {
-  const category = await prisma.category.findUnique({ where: { id: request.params.id } });
+  const category = await prisma.category.findFirst({
+    where: { id: request.params.id, status: "ACTIVE" },
+  });
   if (!category) throw new HttpError(404, "No se encontró la categoría.");
   response.json({ data: category });
 };
@@ -42,6 +46,10 @@ export const createCategory: RequestHandler = async (request, response) => {
 
 export const updateCategory: RequestHandler = async (request, response) => {
   const input = categoryUpdateSchema.parse(request.body);
+  const current = await prisma.category.findFirst({
+    where: { id: request.params.id, status: "ACTIVE" },
+  });
+  if (!current) throw new HttpError(404, "No se encontró la categoría.");
   const category = await prisma.category.update({
     where: { id: request.params.id },
     data: {
@@ -53,6 +61,19 @@ export const updateCategory: RequestHandler = async (request, response) => {
 };
 
 export const deleteCategory: RequestHandler = async (request, response) => {
-  await prisma.category.delete({ where: { id: request.params.id } });
+  const category = await prisma.category.findFirst({
+    where: { id: request.params.id, status: "ACTIVE" },
+  });
+  if (!category) throw new HttpError(404, "No se encontró la categoría.");
+  const projectCount = await prisma.project.count({
+    where: { categoryId: category.id, status: { not: "DELETED" } },
+  });
+  if (projectCount > 0) {
+    throw new HttpError(409, "La categoría tiene proyectos activos y no se puede desactivar.");
+  }
+  await prisma.category.update({
+    where: { id: category.id },
+    data: { status: "INACTIVE" },
+  });
   response.status(204).send();
 };

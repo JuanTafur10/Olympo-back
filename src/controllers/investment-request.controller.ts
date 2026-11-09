@@ -15,10 +15,13 @@ export const listInvestmentRequests: RequestHandler = async (request, response) 
     : request.user!.role === "OWNER"
       ? { project: { ownerId: request.user!.id } }
       : { investorId: request.user!.id };
+  const activeWhere: Prisma.InvestmentRequestWhereInput = {
+    AND: [where, { status: { not: "DELETED" } }],
+  };
   const [total, data] = await Promise.all([
-    prisma.investmentRequest.count({ where }),
+    prisma.investmentRequest.count({ where: activeWhere }),
     prisma.investmentRequest.findMany({
-      where,
+      where: activeWhere,
       include: {
         project: { select: { id: true, title: true, imageUrl: true, ownerId: true } },
         investor: { select: { id: true, name: true } },
@@ -42,7 +45,7 @@ export const getInvestmentRequest: RequestHandler = async (request, response) =>
       investor: { select: { id: true, name: true } },
     },
   });
-  if (!item) throw new HttpError(404, "No se encontró la solicitud.");
+  if (!item || item.status === "DELETED") throw new HttpError(404, "No se encontró la solicitud.");
   const canSee = request.user!.role === "ADMIN"
     || item.investorId === request.user!.id
     || item.project.ownerId === request.user!.id;
@@ -69,7 +72,7 @@ export const updateInvestmentRequest: RequestHandler = async (request, response)
     where: { id: request.params.id },
     include: { project: { select: { ownerId: true } } },
   });
-  if (!current) throw new HttpError(404, "No se encontró la solicitud.");
+  if (!current || current.status === "DELETED") throw new HttpError(404, "No se encontró la solicitud.");
 
   const isAdmin = request.user!.role === "ADMIN";
   const isInvestor = current.investorId === request.user!.id;
@@ -109,11 +112,14 @@ export const deleteInvestmentRequest: RequestHandler = async (request, response)
     where: { id: request.params.id },
     include: { project: { select: { ownerId: true } } },
   });
-  if (!current) throw new HttpError(404, "No se encontró la solicitud.");
+  if (!current || current.status === "DELETED") throw new HttpError(404, "No se encontró la solicitud.");
   const canDelete = request.user!.role === "ADMIN"
     || current.project.ownerId === request.user!.id
     || (current.investorId === request.user!.id && current.status === "PENDING");
   if (!canDelete) throw new HttpError(403, "No tienes permiso para eliminar esta solicitud.");
-  await prisma.investmentRequest.delete({ where: { id: request.params.id } });
+  await prisma.investmentRequest.update({
+    where: { id: request.params.id },
+    data: { status: "DELETED" },
+  });
   response.status(204).send();
 };

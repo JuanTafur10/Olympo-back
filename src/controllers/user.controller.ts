@@ -9,7 +9,7 @@ export const listUsers: RequestHandler = async (request, response) => {
   const [total, users] = await Promise.all([
     prisma.user.count(),
     prisma.user.findMany({
-      select: { id: true, name: true, email: true, role: true, createdAt: true },
+      select: { id: true, name: true, email: true, role: true, status: true, createdAt: true },
       orderBy: { createdAt: "desc" },
       skip: (pagination.currentPage - 1) * pagination.limit,
       take: pagination.limit,
@@ -24,7 +24,7 @@ export const listUsers: RequestHandler = async (request, response) => {
 export const getMe: RequestHandler = async (request, response) => {
   const user = await prisma.user.findUnique({
     where: { id: request.user!.id },
-    select: { id: true, name: true, email: true, role: true, createdAt: true },
+    select: { id: true, name: true, email: true, role: true, status: true, createdAt: true },
   });
   if (!user) throw new HttpError(404, "No se encontró el usuario.");
   response.json({ data: user });
@@ -33,7 +33,7 @@ export const getMe: RequestHandler = async (request, response) => {
 export const getUser: RequestHandler = async (request, response) => {
   const user = await prisma.user.findUnique({
     where: { id: request.params.id },
-    select: { id: true, name: true, email: true, role: true, createdAt: true },
+    select: { id: true, name: true, email: true, role: true, status: true, createdAt: true },
   });
   if (!user) throw new HttpError(404, "No se encontró el usuario.");
   response.json({ data: user });
@@ -56,6 +56,30 @@ export const updateUser: RequestHandler = async (request, response) => {
 
 export const deleteUser: RequestHandler = async (request, response) => {
   if (request.user!.id === request.params.id) throw new HttpError(400, "No puedes eliminar tu propia cuenta de administración.");
-  await prisma.user.delete({ where: { id: request.params.id } });
+  await prisma.$transaction(async (transaction) => {
+    const ownedProjects = await transaction.project.findMany({
+      where: { ownerId: request.params.id, status: { not: "DELETED" } },
+      select: { id: true },
+    });
+    const projectIds = ownedProjects.map((project) => project.id);
+    await transaction.investmentRequest.updateMany({
+      where: {
+        OR: [
+          { investorId: request.params.id },
+          ...(projectIds.length > 0 ? [{ projectId: { in: projectIds } }] : []),
+        ],
+        status: { not: "DELETED" },
+      },
+      data: { status: "DELETED" },
+    });
+    await transaction.project.updateMany({
+      where: { ownerId: request.params.id, status: { not: "DELETED" } },
+      data: { status: "DELETED" },
+    });
+    await transaction.user.update({
+      where: { id: request.params.id },
+      data: { status: "INACTIVE" },
+    });
+  });
   response.status(204).send();
 };
