@@ -16,10 +16,21 @@ enum Role {
   OWNER
 }
 
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CategoryStatus {
+  ACTIVE
+  INACTIVE
+}
+
 enum ProjectStatus {
   DRAFT
   PUBLISHED
   CLOSED
+  DELETED
 }
 
 enum InvestmentRequestStatus {
@@ -27,6 +38,7 @@ enum InvestmentRequestStatus {
   APPROVED
   REJECTED
   WITHDRAWN
+  DELETED
 }
 
 model User {
@@ -35,6 +47,7 @@ model User {
   email               String             @unique @db.VarChar(255)
   passwordHash        String
   role                Role               @default(USER)
+  status              UserStatus         @default(ACTIVE)
   projects            Project[]          @relation("ProjectOwner")
   investmentRequests  InvestmentRequest[] @relation("RequestInvestor")
   reviewedRequests    InvestmentRequest[] @relation("RequestReviewer")
@@ -42,6 +55,7 @@ model User {
   updatedAt           DateTime           @updatedAt
 
   @@index([role])
+  @@index([status])
   @@map("users")
 }
 
@@ -50,11 +64,13 @@ model Category {
   name        String    @unique @db.VarChar(100)
   slug        String    @unique @db.VarChar(120)
   description String?   @db.VarChar(500)
+  status      CategoryStatus @default(ACTIVE)
   projects    Project[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   @@map("categories")
+  @@index([status])
 }
 
 model Project {
