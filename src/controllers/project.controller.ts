@@ -102,12 +102,8 @@ const getEditableProject = async (projectId: string, userId: string, role: strin
 
 export const updateProject: RequestHandler = async (request, response) => {
   const input = projectUpdateSchema.parse(request.body);
-<<<<<<< HEAD
-  await getEditableProject(request.params.id, request.user!.id, request.user!.role);
-  if (input.categoryId) await requireActiveCategory(input.categoryId);
-=======
   await getEditableProject(getRouteParam(request, "id"), request.user!.id, request.user!.role);
->>>>>>> 1adce376d681d3bfac495022b4c4fb6923981350
+  if (input.categoryId) await requireActiveCategory(input.categoryId);
   const project = await prisma.project.update({
     where: { id: getRouteParam(request, "id") },
     data: {

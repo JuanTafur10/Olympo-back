@@ -45,6 +45,14 @@ export const errorHandler: ErrorRequestHandler = (error, _request, response, _ne
       response.status(409).json({ error: { message: "El registro está relacionado con otros datos." } });
       return;
     }
+    if (["P2000", "P2006", "P2011"].includes(error.code)) {
+      response.status(400).json({ error: { message: "Uno o más datos no tienen un formato válido." } });
+      return;
+    }
+    if (["P2004", "P2014"].includes(error.code)) {
+      response.status(409).json({ error: { message: "La operación entra en conflicto con los datos relacionados." } });
+      return;
+    }
     if (error.code === "P2023") {
       response.status(400).json({ error: { message: "El identificador enviado no tiene un formato válido." } });
       return;

@@ -17,7 +17,11 @@ export const listCategories: RequestHandler = async (request, response) => {
     prisma.category.count({ where }),
     prisma.category.findMany({
       where,
-      include: { _count: { select: { projects: true } } },
+      include: {
+        _count: {
+          select: { projects: { where: { status: { not: "DELETED" } } } },
+        },
+      },
       orderBy: { name: "asc" },
       skip: (pagination.currentPage - 1) * pagination.limit,
       take: pagination.limit,
