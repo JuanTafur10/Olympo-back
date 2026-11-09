@@ -84,8 +84,14 @@ export const updateInvestmentRequest: RequestHandler = async (request, response)
   if (isAdmin) {
     data = { ...input, ...(input.status ? { reviewerId: request.user!.id } : {}) };
   } else if (isProjectOwner) {
-    if (!input.status || input.status === "WITHDRAWN" || input.amount !== undefined || input.message !== undefined) {
-      throw new HttpError(400, "Como propietario solo puedes aprobar o rechazar la solicitud.");
+    if (
+      current.status !== "PENDING"
+      || !input.status
+      || input.status === "WITHDRAWN"
+      || input.amount !== undefined
+      || input.message !== undefined
+    ) {
+      throw new HttpError(400, "Como propietario solo puedes aprobar o rechazar solicitudes pendientes.");
     }
     data = { status: input.status, reviewerId: request.user!.id };
   } else {
