@@ -18,9 +18,10 @@ El administrador no se crea desde el formulario. Se crea una sola vez con el see
 3. Define ADMIN_PASSWORD con una contraseña de al menos 12 caracteres.
 4. Inicia PostgreSQL con docker compose up -d db.
 5. Instala los paquetes con npm install.
-6. Aplica las tablas con npm run db:deploy.
-7. Crea el administrador y las categorías iniciales con npm run db:seed.
-8. Inicia la API con npm run dev.
+6. Genera el cliente de Prisma con npm run db:generate.
+7. Aplica las tablas con npm run db:deploy.
+8. Crea el administrador y las categorías iniciales con npm run db:seed.
+9. Inicia la API con npm run dev.
 
 La API queda disponible en http://localhost:4000/api/v1. El endpoint GET /health permite revisar que el servidor responda.
 
