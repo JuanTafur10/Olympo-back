@@ -1,9 +1,12 @@
 import type { RequestHandler } from "express";
 import jwt from "jsonwebtoken";
+import { z } from "zod";
 import type { Role } from "../generated/prisma/client.js";
 import { prisma } from "../config/database.js";
 import { env } from "../config/env.js";
 import { HttpError } from "../errors/http-error.js";
+
+const userIdSchema = z.uuid();
 
 const readToken = (authorization: string | undefined): string | null => {
   if (!authorization) return null;
@@ -21,7 +24,11 @@ const findUserFromToken = async (token: string) => {
     throw new HttpError(401, "La sesión no es válida o ya venció.");
   }
 
-  if (typeof payload === "string" || typeof payload.sub !== "string") {
+  if (
+    typeof payload === "string"
+    || typeof payload.sub !== "string"
+    || !userIdSchema.safeParse(payload.sub).success
+  ) {
     throw new HttpError(401, "La sesión no es válida.");
   }
 
