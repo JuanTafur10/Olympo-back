@@ -1,4 +1,4 @@
-import type { Prisma } from "../generated/prisma/client.js";
+import type { Prisma } from "../../generated/prisma/client.js";
 import { prisma } from "../../config/database.js";
 import type { ProjectListQuery, ProjectRepository } from "../../domain/repository/project.repository.js";
 
