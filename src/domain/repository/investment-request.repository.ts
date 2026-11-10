@@ -46,4 +46,5 @@ export interface InvestmentRequestRepository {
   create(input: InvestmentRequestCreateData, investorId: string): Promise<{ id: string; data: unknown }>;
   findForUpdate(id: string): Promise<(InvestmentRequestForUpdate & { projectTitle: string }) | null>;
   update(id: string, data: InvestmentRequestUpdateData): Promise<{ id: string; data: unknown; projectTitle: string }>;
+  deleteSoft(id: string): Promise<void>;
 }

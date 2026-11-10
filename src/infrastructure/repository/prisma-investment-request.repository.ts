@@ -93,6 +93,12 @@ export class PrismaInvestmentRequestRepository implements InvestmentRequestRepos
     });
     return { id: item.id, data: item, projectTitle: item.project.title };
   }
+  async deleteSoft(id: string): Promise<void> {
+    await prisma.investmentRequest.update({
+      where: { id },
+      data: { status: "DELETED" },
+    });
+  }
 }
 
 export const prismaInvestmentRequestRepository = new PrismaInvestmentRequestRepository();

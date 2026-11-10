@@ -1,14 +1,12 @@
 import type { RequestHandler } from "express";
 import { getRouteParam } from "../utils/route-param.js";
-import type { Prisma } from "../generated/prisma/client.js";
 import { ListInvestmentRequests } from "../application/use-cases/list-investment-requests.js";
 import { GetInvestmentRequest } from "../application/use-cases/get-investment-request.js";
 import { CreateInvestmentRequest } from "../application/use-cases/create-investment-request.js";
 import { UpdateInvestmentRequest } from "../application/use-cases/update-investment-request.js";
+import { DeleteInvestmentRequest } from "../application/use-cases/delete-investment-request.js";
 import { prismaInvestmentRequestNotifier } from "../infrastructure/services/prisma-investment-request-notifier.js";
 import { prismaInvestmentRequestRepository } from "../infrastructure/repository/prisma-investment-request.repository.js";
-import { prisma } from "../config/database.js";
-import { HttpError } from "../errors/http-error.js";
 import { paginationFromQuery } from "../utils/pagination.js";
 import {
   investmentRequestCreateSchema,
@@ -25,6 +23,7 @@ const updateInvestmentRequestUseCase = new UpdateInvestmentRequest(
   prismaInvestmentRequestRepository,
   prismaInvestmentRequestNotifier,
 );
+const deleteInvestmentRequestUseCase = new DeleteInvestmentRequest(prismaInvestmentRequestRepository);
 
 export const listInvestmentRequests: RequestHandler = async (request, response) => {
   const pagination = paginationFromQuery(request.query);
@@ -61,18 +60,10 @@ export const updateInvestmentRequest: RequestHandler = async (request, response)
 };
 
 export const deleteInvestmentRequest: RequestHandler = async (request, response) => {
-  const current = await prisma.investmentRequest.findUnique({
-    where: { id: getRouteParam(request, "id") },
-    include: { project: { select: { ownerId: true } } },
-  });
-  if (!current || current.status === "DELETED") throw new HttpError(404, "No se encontró la solicitud.");
-  const canDelete = request.user!.role === "ADMIN"
-    || current.project.ownerId === request.user!.id
-    || (current.investorId === request.user!.id && current.status === "PENDING");
-  if (!canDelete) throw new HttpError(403, "No tienes permiso para eliminar esta solicitud.");
-  await prisma.investmentRequest.update({
-    where: { id: getRouteParam(request, "id") },
-    data: { status: "DELETED" },
-  });
+  await deleteInvestmentRequestUseCase.execute(
+    getRouteParam(request, "id"),
+    request.user!.id,
+    request.user!.role,
+  );
   response.status(204).send();
 };
