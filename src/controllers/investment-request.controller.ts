@@ -2,6 +2,7 @@ import type { RequestHandler } from "express";
 import { getRouteParam } from "../utils/route-param.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { ListInvestmentRequests } from "../application/use-cases/list-investment-requests.js";
+import { GetInvestmentRequest } from "../application/use-cases/get-investment-request.js";
 import { prismaInvestmentRequestRepository } from "../infrastructure/repository/prisma-investment-request.repository.js";
 import { prisma } from "../config/database.js";
 import { HttpError } from "../errors/http-error.js";
@@ -12,6 +13,7 @@ import {
 } from "../validation/domain.schemas.js";
 
 const listInvestmentRequestsUseCase = new ListInvestmentRequests(prismaInvestmentRequestRepository);
+const getInvestmentRequestUseCase = new GetInvestmentRequest(prismaInvestmentRequestRepository);
 
 export const listInvestmentRequests: RequestHandler = async (request, response) => {
   const pagination = paginationFromQuery(request.query);
@@ -23,18 +25,11 @@ export const listInvestmentRequests: RequestHandler = async (request, response) 
 };
 
 export const getInvestmentRequest: RequestHandler = async (request, response) => {
-  const item = await prisma.investmentRequest.findUnique({
-    where: { id: getRouteParam(request, "id") },
-    include: {
-      project: { select: { id: true, title: true, imageUrl: true, ownerId: true } },
-      investor: { select: { id: true, name: true } },
-    },
-  });
-  if (!item || item.status === "DELETED") throw new HttpError(404, "No se encontró la solicitud.");
-  const canSee = request.user!.role === "ADMIN"
-    || item.investorId === request.user!.id
-    || item.project.ownerId === request.user!.id;
-  if (!canSee) throw new HttpError(403, "No tienes permiso para ver esta solicitud.");
+  const item = await getInvestmentRequestUseCase.execute(
+    getRouteParam(request, "id"),
+    request.user!.id,
+    request.user!.role,
+  );
   response.json({ data: item });
 };
 

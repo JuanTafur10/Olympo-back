@@ -35,6 +35,23 @@ export class PrismaInvestmentRequestRepository implements InvestmentRequestRepos
     ]);
     return { data, total };
   }
+  async findById(id: string) {
+    const item = await prisma.investmentRequest.findUnique({
+      where: { id },
+      include: {
+        project: { select: { id: true, title: true, imageUrl: true, ownerId: true } },
+        investor: { select: { id: true, name: true } },
+      },
+    });
+    if (!item) return null;
+    return {
+      id: item.id,
+      investorId: item.investorId,
+      projectOwnerId: item.project.ownerId,
+      status: item.status,
+      data: item,
+    };
+  }
 }
 
 export const prismaInvestmentRequestRepository = new PrismaInvestmentRequestRepository();
