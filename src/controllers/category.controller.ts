@@ -1,69 +1,37 @@
-import { randomUUID } from "node:crypto";
 import type { RequestHandler } from "express";
 import { getRouteParam } from "../utils/route-param.js";
-import { prisma } from "../config/database.js";
 import { ListCategories } from "../application/use-cases/list-categories.js";
+import { ManageCategories } from "../application/use-cases/manage-categories.js";
 import { prismaCategoryRepository } from "../infrastructure/repository/prisma-category.repository.js";
-import { HttpError } from "../errors/http-error.js";
 import { paginationFromQuery } from "../utils/pagination.js";
 import { categoryCreateSchema, categoryUpdateSchema } from "../validation/domain.schemas.js";
 
-const slugFor = (name: string) =>
-  name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + randomUUID().slice(0, 6);
+const listCategoriesUseCase = new ListCategories(prismaCategoryRepository);
+const manageCategories = new ManageCategories(prismaCategoryRepository);
 
 export const listCategories: RequestHandler = async (request, response) => {
   const pagination = paginationFromQuery(request.query);
-  const result = await new ListCategories(prismaCategoryRepository).execute(pagination);
-  response.json(result);
+  response.json(await listCategoriesUseCase.execute(pagination));
 };
 
 export const getCategory: RequestHandler = async (request, response) => {
-  const category = await prisma.category.findFirst({
-    where: { id: getRouteParam(request, "id"), status: "ACTIVE" },
-  });
-  if (!category) throw new HttpError(404, "No se encontró la categoría.");
+  const category = await manageCategories.get(getRouteParam(request, "id"));
   response.json({ data: category });
 };
 
 export const createCategory: RequestHandler = async (request, response) => {
   const input = categoryCreateSchema.parse(request.body);
-  const category = await prisma.category.create({
-    data: { ...input, slug: slugFor(input.name) },
-  });
+  const category = await manageCategories.create(input);
   response.status(201).json({ data: category });
 };
 
 export const updateCategory: RequestHandler = async (request, response) => {
   const input = categoryUpdateSchema.parse(request.body);
-  const current = await prisma.category.findFirst({
-    where: { id: getRouteParam(request, "id"), status: "ACTIVE" },
-  });
-  if (!current) throw new HttpError(404, "No se encontró la categoría.");
-  const category = await prisma.category.update({
-    where: { id: getRouteParam(request, "id") },
-    data: {
-      ...input,
-      ...(input.name ? { slug: slugFor(input.name) } : {}),
-    },
-  });
+  const category = await manageCategories.update(getRouteParam(request, "id"), input);
   response.json({ data: category });
 };
 
 export const deleteCategory: RequestHandler = async (request, response) => {
-  const category = await prisma.category.findFirst({
-    where: { id: getRouteParam(request, "id"), status: "ACTIVE" },
-  });
-  if (!category) throw new HttpError(404, "No se encontró la categoría.");
-  const projectCount = await prisma.project.count({
-    where: { categoryId: category.id, status: { not: "DELETED" } },
-  });
-  if (projectCount > 0) {
-    throw new HttpError(409, "La categoría tiene proyectos activos y no se puede desactivar.");
-  }
-  await prisma.category.update({
-    where: { id: category.id },
-    data: { status: "INACTIVE" },
-  });
+  await manageCategories.deactivate(getRouteParam(request, "id"));
   response.status(204).send();
 };

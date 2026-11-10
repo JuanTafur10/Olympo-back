@@ -1,5 +1,5 @@
 import { prisma } from "../../config/database.js";
-import type { CategoryListItem, CategoryRepository } from "../../domain/repository/category.repository.js";
+import type { CategoryListItem, CategoryRecord, CategoryRepository } from "../../domain/repository/category.repository.js";
 
 export class PrismaCategoryRepository implements CategoryRepository {
   countActive() {
@@ -7,7 +7,7 @@ export class PrismaCategoryRepository implements CategoryRepository {
   }
 
   async findActivePage(skip: number, take: number): Promise<CategoryListItem[]> {
-    const categories = await prisma.category.findMany({
+    return prisma.category.findMany({
       where: { status: "ACTIVE" },
       include: {
         _count: {
@@ -18,7 +18,28 @@ export class PrismaCategoryRepository implements CategoryRepository {
       skip,
       take,
     });
-    return categories;
+  }
+
+  findActiveById(id: string): Promise<CategoryRecord | null> {
+    return prisma.category.findFirst({ where: { id, status: "ACTIVE" } });
+  }
+
+  create(input: { name: string; description?: string }, slug: string): Promise<CategoryRecord> {
+    return prisma.category.create({ data: { ...input, slug } });
+  }
+
+  update(id: string, input: { name?: string; description?: string; slug?: string }): Promise<CategoryRecord> {
+    return prisma.category.update({ where: { id }, data: input });
+  }
+
+  countProjectsNotDeleted(categoryId: string) {
+    return prisma.project.count({
+      where: { categoryId, status: { not: "DELETED" } },
+    });
+  }
+
+  async deactivate(id: string): Promise<void> {
+    await prisma.category.update({ where: { id }, data: { status: "INACTIVE" } });
   }
 }
 
