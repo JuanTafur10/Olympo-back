@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import type { RequestHandler } from "express";
 import { getRouteParam } from "../utils/route-param.js";
 import { prisma } from "../config/database.js";
+import { ListCategories } from "../application/use-cases/list-categories.js";
+import { prismaCategoryRepository } from "../infrastructure/repository/prisma-category.repository.js";
 import { HttpError } from "../errors/http-error.js";
 import { paginationFromQuery } from "../utils/pagination.js";
 import { categoryCreateSchema, categoryUpdateSchema } from "../validation/domain.schemas.js";
@@ -12,25 +14,8 @@ const slugFor = (name: string) =>
 
 export const listCategories: RequestHandler = async (request, response) => {
   const pagination = paginationFromQuery(request.query);
-  const where = { status: "ACTIVE" as const };
-  const [total, data] = await Promise.all([
-    prisma.category.count({ where }),
-    prisma.category.findMany({
-      where,
-      include: {
-        _count: {
-          select: { projects: { where: { status: { not: "DELETED" } } } },
-        },
-      },
-      orderBy: { name: "asc" },
-      skip: (pagination.currentPage - 1) * pagination.limit,
-      take: pagination.limit,
-    }),
-  ]);
-  response.json({
-    data,
-    pagination: { ...pagination, total, totalPages: Math.ceil(total / pagination.limit) },
-  });
+  const result = await new ListCategories(prismaCategoryRepository).execute(pagination);
+  response.json(result);
 };
 
 export const getCategory: RequestHandler = async (request, response) => {
