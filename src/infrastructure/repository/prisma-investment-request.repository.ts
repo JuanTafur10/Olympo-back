@@ -3,6 +3,7 @@ import { prisma } from "../../config/database.js";
 import type {
   InvestmentRequestListQuery,
   InvestmentRequestRepository,
+  InvestmentRequestUpdateData,
 } from "../../domain/repository/investment-request.repository.js";
 
 export class PrismaInvestmentRequestRepository implements InvestmentRequestRepository {
@@ -65,6 +66,32 @@ export class PrismaInvestmentRequestRepository implements InvestmentRequestRepos
       include: { project: { select: { id: true, title: true } } },
     });
     return { id: item.id, data: item };
+  }
+  findForUpdate(id: string) {
+    return prisma.investmentRequest.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        investorId: true,
+        status: true,
+        project: { select: { ownerId: true, title: true } },
+      },
+    }).then((item) => item ? {
+      id: item.id,
+      investorId: item.investorId,
+      projectOwnerId: item.project.ownerId,
+      status: item.status,
+      projectTitle: item.project.title,
+    } : null);
+  }
+
+  async update(id: string, data: InvestmentRequestUpdateData) {
+    const item = await prisma.investmentRequest.update({
+      where: { id },
+      data,
+      include: { project: { select: { id: true, title: true } } },
+    });
+    return { id: item.id, data: item, projectTitle: item.project.title };
   }
 }
 

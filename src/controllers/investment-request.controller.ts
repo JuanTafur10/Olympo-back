@@ -4,6 +4,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 import { ListInvestmentRequests } from "../application/use-cases/list-investment-requests.js";
 import { GetInvestmentRequest } from "../application/use-cases/get-investment-request.js";
 import { CreateInvestmentRequest } from "../application/use-cases/create-investment-request.js";
+import { UpdateInvestmentRequest } from "../application/use-cases/update-investment-request.js";
 import { prismaInvestmentRequestNotifier } from "../infrastructure/services/prisma-investment-request-notifier.js";
 import { prismaInvestmentRequestRepository } from "../infrastructure/repository/prisma-investment-request.repository.js";
 import { prisma } from "../config/database.js";
@@ -17,6 +18,10 @@ import {
 const listInvestmentRequestsUseCase = new ListInvestmentRequests(prismaInvestmentRequestRepository);
 const getInvestmentRequestUseCase = new GetInvestmentRequest(prismaInvestmentRequestRepository);
 const createInvestmentRequestUseCase = new CreateInvestmentRequest(
+  prismaInvestmentRequestRepository,
+  prismaInvestmentRequestNotifier,
+);
+const updateInvestmentRequestUseCase = new UpdateInvestmentRequest(
   prismaInvestmentRequestRepository,
   prismaInvestmentRequestNotifier,
 );
@@ -47,60 +52,11 @@ export const createInvestmentRequest: RequestHandler = async (request, response)
 
 export const updateInvestmentRequest: RequestHandler = async (request, response) => {
   const input = investmentRequestUpdateSchema.parse(request.body);
-  const current = await prisma.investmentRequest.findUnique({
-    where: { id: getRouteParam(request, "id") },
-    include: { project: { select: { ownerId: true } } },
-  });
-  if (!current || current.status === "DELETED") throw new HttpError(404, "No se encontró la solicitud.");
-
-  const isAdmin = request.user!.role === "ADMIN";
-  const isInvestor = current.investorId === request.user!.id;
-  const isProjectOwner = current.project.ownerId === request.user!.id;
-  if (!isAdmin && !isInvestor && !isProjectOwner) throw new HttpError(403, "No tienes permiso para cambiar esta solicitud.");
-
-  let data: Prisma.InvestmentRequestUncheckedUpdateInput;
-  if (isAdmin) {
-    data = { ...input, ...(input.status ? { reviewerId: request.user!.id } : {}) };
-  } else if (isProjectOwner) {
-    if (
-      current.status !== "PENDING"
-      || !input.status
-      || input.status === "WITHDRAWN"
-      || input.amount !== undefined
-      || input.message !== undefined
-    ) {
-      throw new HttpError(400, "Como propietario solo puedes aprobar o rechazar solicitudes pendientes.");
-    }
-    data = { status: input.status, reviewerId: request.user!.id };
-  } else {
-    if (
-      current.status !== "PENDING"
-      || (input.status && input.status !== "WITHDRAWN")
-      || (input.status === "WITHDRAWN" && (input.amount !== undefined || input.message !== undefined))
-      || (!input.status && input.amount === undefined && input.message === undefined)
-    ) {
-      throw new HttpError(400, "Solo puedes editar una solicitud pendiente o retirarla.");
-    }
-    data = { amount: input.amount, message: input.message, status: input.status };
-  }
-
-  const item = await prisma.investmentRequest.update({
-    where: { id: getRouteParam(request, "id") },
-    data,
-    include: { project: { select: { id: true, title: true } } },
-  });
-  if (input.status && input.status !== current.status && (input.status === "APPROVED" || input.status === "REJECTED")) {
-    await prisma.notification.create({
-      data: {
-        userId: current.investorId,
-        title: input.status === "APPROVED" ? "Solicitud aprobada" : "Solicitud rechazada",
-        message: `El propietario actualizó tu solicitud para ${item.project.title}.`,
-        type: "investment_request",
-        routeDestination: "/solicitudes",
-        metadata: { investmentRequestId: item.id },
-      },
-    });
-  }
+  const item = await updateInvestmentRequestUseCase.execute(
+    getRouteParam(request, "id"),
+    input,
+    { id: request.user!.id, role: request.user!.role },
+  );
   response.json({ data: item });
 };
 
