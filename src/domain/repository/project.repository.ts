@@ -21,4 +21,6 @@ export interface ProjectRepository {
   list(query: ProjectListQuery): Promise<{ data: unknown[]; total: number }>;
   hasActiveCategory(categoryId: string): Promise<boolean>;
   create(input: ProjectCreateData, ownerId: string, slug: string): Promise<unknown>;
+  findForManagement(id: string): Promise<ProjectRecord | null>;
+  update(id: string, input: ProjectUpdateData, slug?: string): Promise<unknown>;
 }

@@ -3,6 +3,7 @@ import { getRouteParam } from "../utils/route-param.js";
 import { prisma } from "../config/database.js";
 import { ListProjects } from "../application/use-cases/list-projects.js";
 import { CreateProject } from "../application/use-cases/create-project.js";
+import { UpdateProject } from "../application/use-cases/update-project.js";
 import { prismaProjectRepository } from "../infrastructure/repository/prisma-project.repository.js";
 import { HttpError } from "../errors/http-error.js";
 import { uploadProjectImageFile } from "../services/storage.service.js";
@@ -10,6 +11,7 @@ import { paginationFromQuery } from "../utils/pagination.js";
 import { projectCreateSchema, projectListSchema, projectUpdateSchema } from "../validation/domain.schemas.js";
 
 const createProjectUseCase = new CreateProject(prismaProjectRepository);
+const updateProjectUseCase = new UpdateProject(prismaProjectRepository);
 
 const requireActiveCategory = async (categoryId: string) => {
   const category = await prisma.category.findFirst({
@@ -67,16 +69,12 @@ const getEditableProject = async (projectId: string, userId: string, role: strin
 
 export const updateProject: RequestHandler = async (request, response) => {
   const input = projectUpdateSchema.parse(request.body);
-  await getEditableProject(getRouteParam(request, "id"), request.user!.id, request.user!.role);
-  if (input.categoryId) await requireActiveCategory(input.categoryId);
-  const project = await prisma.project.update({
-    where: { id: getRouteParam(request, "id") },
-    data: {
-      ...input,
-      ...(input.title ? { slug: slugFor(input.title) } : {}),
-    },
-    include: { category: true },
-  });
+  const project = await updateProjectUseCase.execute(
+    getRouteParam(request, "id"),
+    input,
+    request.user!.id,
+    request.user!.role,
+  );
   response.json({ data: project });
 };
 

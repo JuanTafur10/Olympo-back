@@ -1,6 +1,6 @@
 import type { Prisma } from "../../generated/prisma/client.js";
 import { prisma } from "../../config/database.js";
-import type { ProjectListQuery, ProjectRepository } from "../../domain/repository/project.repository.js";
+import type { ProjectListQuery, ProjectRepository, ProjectUpdateData } from "../../domain/repository/project.repository.js";
 
 export class PrismaProjectRepository implements ProjectRepository {
   async list(query: ProjectListQuery) {
@@ -53,6 +53,20 @@ export class PrismaProjectRepository implements ProjectRepository {
   create(input: import("../../domain/repository/project.repository.js").ProjectCreateData, ownerId: string, slug: string) {
     return prisma.project.create({
       data: { ...input, ownerId, slug },
+      include: { category: true },
+    });
+  }
+  findForManagement(id: string) {
+    return prisma.project.findUnique({
+      where: { id },
+      select: { id: true, ownerId: true, status: true },
+    });
+  }
+
+  update(id: string, input: ProjectUpdateData, slug?: string) {
+    return prisma.project.update({
+      where: { id },
+      data: { ...input, ...(slug ? { slug } : {}) },
       include: { category: true },
     });
   }
