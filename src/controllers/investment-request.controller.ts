@@ -64,6 +64,16 @@ export const createInvestmentRequest: RequestHandler = async (request, response)
     data: { ...input, investorId: request.user!.id },
     include: { project: { select: { id: true, title: true } } },
   });
+  await prisma.notification.create({
+    data: {
+      userId: project.ownerId,
+      title: "Nueva solicitud de inversión",
+      message: `Recibiste una solicitud para el proyecto ${project.title}.`,
+      type: "investment_request",
+      routeDestination: "/solicitudes",
+      metadata: { investmentRequestId: item.id, projectId: project.id },
+    },
+  });
   response.status(201).json({ data: item });
 };
 
@@ -111,6 +121,18 @@ export const updateInvestmentRequest: RequestHandler = async (request, response)
     data,
     include: { project: { select: { id: true, title: true } } },
   });
+  if (input.status && input.status !== current.status && (input.status === "APPROVED" || input.status === "REJECTED")) {
+    await prisma.notification.create({
+      data: {
+        userId: current.investorId,
+        title: input.status === "APPROVED" ? "Solicitud aprobada" : "Solicitud rechazada",
+        message: `El propietario actualizó tu solicitud para ${item.project.title}.`,
+        type: "investment_request",
+        routeDestination: "/solicitudes",
+        metadata: { investmentRequestId: item.id },
+      },
+    });
+  }
   response.json({ data: item });
 };
 

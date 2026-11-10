@@ -2,6 +2,8 @@ import { Router } from "express";
 import { authRoutes } from "./auth.routes.js";
 import { categoryRoutes } from "./category.routes.js";
 import { investmentRequestRoutes } from "./investment-request.routes.js";
+import { notificationRoutes } from "./notification.routes.js";
+import { chatbotRoutes } from "./chatbot.routes.js";
 import { projectRoutes } from "./project.routes.js";
 import { userRoutes } from "./user.routes.js";
 
@@ -15,3 +17,5 @@ apiRouter.use("/users", userRoutes);
 apiRouter.use("/categories", categoryRoutes);
 apiRouter.use("/projects", projectRoutes);
 apiRouter.use("/investment-requests", investmentRequestRoutes);
+apiRouter.use("/notificaciones", notificationRoutes);
+apiRouter.use("/chatbot", chatbotRoutes);
