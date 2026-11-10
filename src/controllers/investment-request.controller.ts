@@ -1,6 +1,8 @@
 import type { RequestHandler } from "express";
 import { getRouteParam } from "../utils/route-param.js";
 import type { Prisma } from "../generated/prisma/client.js";
+import { ListInvestmentRequests } from "../application/use-cases/list-investment-requests.js";
+import { prismaInvestmentRequestRepository } from "../infrastructure/repository/prisma-investment-request.repository.js";
 import { prisma } from "../config/database.js";
 import { HttpError } from "../errors/http-error.js";
 import { paginationFromQuery } from "../utils/pagination.js";
@@ -9,38 +11,15 @@ import {
   investmentRequestUpdateSchema,
 } from "../validation/domain.schemas.js";
 
+const listInvestmentRequestsUseCase = new ListInvestmentRequests(prismaInvestmentRequestRepository);
+
 export const listInvestmentRequests: RequestHandler = async (request, response) => {
   const pagination = paginationFromQuery(request.query);
-  const where: Prisma.InvestmentRequestWhereInput = request.user!.role === "ADMIN"
-    ? {}
-    : request.user!.role === "OWNER"
-      ? { project: { ownerId: request.user!.id } }
-      : { investorId: request.user!.id };
-  const activeWhere: Prisma.InvestmentRequestWhereInput = {
-    AND: [where, { status: { not: "DELETED" } }],
-  };
-  const [total, data] = await Promise.all([
-    prisma.investmentRequest.count({ where: activeWhere }),
-    prisma.investmentRequest.findMany({
-      where: activeWhere,
-      include: {
-        project: {
-          select: {
-            id: true, title: true, imageUrl: true, ownerId: true, targetAmount: true,
-            owner: { select: { id: true, name: true, email: true } },
-          },
-        },
-        investor: { select: { id: true, name: true, email: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      skip: (pagination.currentPage - 1) * pagination.limit,
-      take: pagination.limit,
-    }),
-  ]);
-  response.json({
-    data,
-    pagination: { ...pagination, total, totalPages: Math.ceil(total / pagination.limit) },
+  const result = await listInvestmentRequestsUseCase.execute({
+    pagination,
+    viewer: { id: request.user!.id, role: request.user!.role },
   });
+  response.json(result);
 };
 
 export const getInvestmentRequest: RequestHandler = async (request, response) => {
