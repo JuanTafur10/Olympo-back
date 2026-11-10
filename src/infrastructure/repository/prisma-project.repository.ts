@@ -82,6 +82,13 @@ export class PrismaProjectRepository implements ProjectRepository {
       });
     });
   }
+  updateImage(id: string, imageUrl: string) {
+    return prisma.project.update({
+      where: { id },
+      data: { imageUrl },
+      include: { category: true },
+    });
+  }
 }
 
 export const prismaProjectRepository = new PrismaProjectRepository();

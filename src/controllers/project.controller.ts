@@ -5,6 +5,7 @@ import { ListProjects } from "../application/use-cases/list-projects.js";
 import { CreateProject } from "../application/use-cases/create-project.js";
 import { UpdateProject } from "../application/use-cases/update-project.js";
 import { DeleteProject } from "../application/use-cases/delete-project.js";
+import { UploadProjectImage } from "../application/use-cases/upload-project-image.js";
 import { prismaProjectRepository } from "../infrastructure/repository/prisma-project.repository.js";
 import { HttpError } from "../errors/http-error.js";
 import { uploadProjectImageFile } from "../services/storage.service.js";
@@ -14,7 +15,9 @@ import { projectCreateSchema, projectListSchema, projectUpdateSchema } from "../
 const createProjectUseCase = new CreateProject(prismaProjectRepository);
 const updateProjectUseCase = new UpdateProject(prismaProjectRepository);
 const deleteProjectUseCase = new DeleteProject(prismaProjectRepository);
-
+const uploadProjectImageUseCase = new UploadProjectImage(prismaProjectRepository, {
+  upload: uploadProjectImageFile,
+});
 
 export const listProjects: RequestHandler = async (request, response) => {
   const filters = projectListSchema.parse(request.query);
@@ -52,15 +55,6 @@ export const createProject: RequestHandler = async (request, response) => {
   response.status(201).json({ data: project });
 };
 
-const getEditableProject = async (projectId: string, userId: string, role: string) => {
-  const project = await prisma.project.findUnique({ where: { id: projectId } });
-  if (!project) throw new HttpError(404, "No se encontró el proyecto.");
-  if (project.status === "DELETED") throw new HttpError(404, "No se encontró el proyecto.");
-  if (role !== "ADMIN" && project.ownerId !== userId) {
-    throw new HttpError(403, "Solo puedes gestionar los proyectos que creaste.");
-  }
-  return project;
-};
 
 export const updateProject: RequestHandler = async (request, response) => {
   const input = projectUpdateSchema.parse(request.body);
@@ -84,14 +78,11 @@ export const deleteProject: RequestHandler = async (request, response) => {
 
 export const uploadProjectImage: RequestHandler = async (request, response) => {
   if (!request.file) throw new HttpError(400, "Adjunta el archivo en el campo image.");
-  await getEditableProject(getRouteParam(request, "id"), request.user!.id, request.user!.role);
-  const imageUrl = await uploadProjectImageFile(getRouteParam(request, "id"), request.file);
-  const project = await prisma.project.update({
-    where: { id: getRouteParam(request, "id") },
-    data: { imageUrl },
-    include: { category: true },
-  });
+  const project = await uploadProjectImageUseCase.execute(
+    getRouteParam(request, "id"),
+    request.file,
+    request.user!.id,
+    request.user!.role,
+  );
   response.json({ data: project });
 };
-
-export const requireProjectOwner = getEditableProject;

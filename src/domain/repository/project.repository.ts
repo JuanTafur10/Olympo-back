@@ -37,4 +37,5 @@ export interface ProjectRepository {
   findForManagement(id: string): Promise<ProjectRecord | null>;
   update(id: string, input: ProjectUpdateData, slug?: string): Promise<unknown>;
   deleteSoft(id: string): Promise<void>;
+  updateImage(id: string, imageUrl: string): Promise<unknown>;
 }
