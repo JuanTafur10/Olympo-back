@@ -9,6 +9,16 @@ export interface ProjectListQuery {
   status?: "DRAFT" | "PUBLISHED" | "CLOSED";
 }
 
+export interface ProjectCreateData {
+  title: string;
+  description: string;
+  categoryId: string;
+  targetAmount: number;
+  status: "DRAFT" | "PUBLISHED";
+}
+
 export interface ProjectRepository {
   list(query: ProjectListQuery): Promise<{ data: unknown[]; total: number }>;
+  hasActiveCategory(categoryId: string): Promise<boolean>;
+  create(input: ProjectCreateData, ownerId: string, slug: string): Promise<unknown>;
 }

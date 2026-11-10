@@ -1,17 +1,15 @@
-import { randomUUID } from "node:crypto";
 import type { RequestHandler } from "express";
 import { getRouteParam } from "../utils/route-param.js";
 import { prisma } from "../config/database.js";
 import { ListProjects } from "../application/use-cases/list-projects.js";
+import { CreateProject } from "../application/use-cases/create-project.js";
 import { prismaProjectRepository } from "../infrastructure/repository/prisma-project.repository.js";
 import { HttpError } from "../errors/http-error.js";
 import { uploadProjectImageFile } from "../services/storage.service.js";
 import { paginationFromQuery } from "../utils/pagination.js";
 import { projectCreateSchema, projectListSchema, projectUpdateSchema } from "../validation/domain.schemas.js";
 
-const slugFor = (title: string) =>
-  title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + randomUUID().slice(0, 8);
+const createProjectUseCase = new CreateProject(prismaProjectRepository);
 
 const requireActiveCategory = async (categoryId: string) => {
   const category = await prisma.category.findFirst({
@@ -53,16 +51,7 @@ export const getProject: RequestHandler = async (request, response) => {
 
 export const createProject: RequestHandler = async (request, response) => {
   const input = projectCreateSchema.parse(request.body);
-  await requireActiveCategory(input.categoryId);
-  const project = await prisma.project.create({
-    data: {
-      ...input,
-      targetAmount: input.targetAmount,
-      ownerId: request.user!.id,
-      slug: slugFor(input.title),
-    },
-    include: { category: true },
-  });
+  const project = await createProjectUseCase.execute(input, request.user!.id);
   response.status(201).json({ data: project });
 };
 

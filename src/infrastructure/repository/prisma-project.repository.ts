@@ -42,6 +42,20 @@ export class PrismaProjectRepository implements ProjectRepository {
     ]);
     return { data, total };
   }
+  async hasActiveCategory(categoryId: string): Promise<boolean> {
+    const category = await prisma.category.findFirst({
+      where: { id: categoryId, status: "ACTIVE" },
+      select: { id: true },
+    });
+    return Boolean(category);
+  }
+
+  create(input: import("../../domain/repository/project.repository.js").ProjectCreateData, ownerId: string, slug: string) {
+    return prisma.project.create({
+      data: { ...input, ownerId, slug },
+      include: { category: true },
+    });
+  }
 }
 
 export const prismaProjectRepository = new PrismaProjectRepository();
