@@ -13,13 +13,6 @@ import { projectCreateSchema, projectListSchema, projectUpdateSchema } from "../
 const createProjectUseCase = new CreateProject(prismaProjectRepository);
 const updateProjectUseCase = new UpdateProject(prismaProjectRepository);
 
-const requireActiveCategory = async (categoryId: string) => {
-  const category = await prisma.category.findFirst({
-    where: { id: categoryId, status: "ACTIVE" },
-    select: { id: true },
-  });
-  if (!category) throw new HttpError(400, "Selecciona una categoría activa.");
-};
 
 export const listProjects: RequestHandler = async (request, response) => {
   const filters = projectListSchema.parse(request.query);
