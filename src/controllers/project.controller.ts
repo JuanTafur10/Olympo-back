@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import type { RequestHandler } from "express";
 import { getRouteParam } from "../utils/route-param.js";
-import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../config/database.js";
+import { ListProjects } from "../application/use-cases/list-projects.js";
+import { prismaProjectRepository } from "../infrastructure/repository/prisma-project.repository.js";
 import { HttpError } from "../errors/http-error.js";
 import { uploadProjectImageFile } from "../services/storage.service.js";
 import { paginationFromQuery } from "../utils/pagination.js";
@@ -23,42 +24,17 @@ const requireActiveCategory = async (categoryId: string) => {
 export const listProjects: RequestHandler = async (request, response) => {
   const filters = projectListSchema.parse(request.query);
   const pagination = paginationFromQuery(request.query);
-  const search = filters.q
-    ? { OR: [{ title: { contains: filters.q, mode: "insensitive" as const } }, { description: { contains: filters.q, mode: "insensitive" as const } }] }
-    : {};
-  const visibility = request.user?.role === "ADMIN"
-    ? {}
-    : request.user?.role === "OWNER"
-      ? { OR: [{ status: "PUBLISHED" as const }, { ownerId: request.user.id }] }
-      : { status: "PUBLISHED" as const };
-  const where: Prisma.ProjectWhereInput = {
-    AND: [
-      { status: { not: "DELETED" } },
-      visibility,
-      search,
-      ...(filters.categoryId ? [{ categoryId: filters.categoryId }] : []),
-      ...(filters.status ? [{ status: filters.status }] : []),
-    ],
-  };
-
-  const [total, data] = await Promise.all([
-    prisma.project.count({ where }),
-    prisma.project.findMany({
-      where,
-      include: {
-        category: true,
-        owner: { select: { id: true, name: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      skip: (pagination.currentPage - 1) * pagination.limit,
-      take: pagination.limit,
-    }),
-  ]);
-
-  response.json({
-    data,
-    pagination: { ...pagination, total, totalPages: Math.ceil(total / pagination.limit) },
+  const viewer = request.user
+    ? { id: request.user.id, role: request.user.role }
+    : { role: "USER" as const };
+  const result = await new ListProjects(prismaProjectRepository).execute({
+    pagination,
+    viewer,
+    q: filters.q,
+    categoryId: filters.categoryId,
+    status: filters.status,
   });
+  response.json(result);
 };
 
 export const getProject: RequestHandler = async (request, response) => {
