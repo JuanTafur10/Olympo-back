@@ -3,6 +3,8 @@ import { getRouteParam } from "../utils/route-param.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { ListInvestmentRequests } from "../application/use-cases/list-investment-requests.js";
 import { GetInvestmentRequest } from "../application/use-cases/get-investment-request.js";
+import { CreateInvestmentRequest } from "../application/use-cases/create-investment-request.js";
+import { prismaInvestmentRequestNotifier } from "../infrastructure/services/prisma-investment-request-notifier.js";
 import { prismaInvestmentRequestRepository } from "../infrastructure/repository/prisma-investment-request.repository.js";
 import { prisma } from "../config/database.js";
 import { HttpError } from "../errors/http-error.js";
@@ -14,6 +16,10 @@ import {
 
 const listInvestmentRequestsUseCase = new ListInvestmentRequests(prismaInvestmentRequestRepository);
 const getInvestmentRequestUseCase = new GetInvestmentRequest(prismaInvestmentRequestRepository);
+const createInvestmentRequestUseCase = new CreateInvestmentRequest(
+  prismaInvestmentRequestRepository,
+  prismaInvestmentRequestNotifier,
+);
 
 export const listInvestmentRequests: RequestHandler = async (request, response) => {
   const pagination = paginationFromQuery(request.query);
@@ -35,24 +41,7 @@ export const getInvestmentRequest: RequestHandler = async (request, response) =>
 
 export const createInvestmentRequest: RequestHandler = async (request, response) => {
   const input = investmentRequestCreateSchema.parse(request.body);
-  const project = await prisma.project.findUnique({ where: { id: input.projectId } });
-  if (!project || project.status !== "PUBLISHED") throw new HttpError(404, "No se encontró un proyecto publicado.");
-  if (project.ownerId === request.user!.id) throw new HttpError(400, "No puedes enviar una solicitud a tu propio proyecto.");
-
-  const item = await prisma.investmentRequest.create({
-    data: { ...input, investorId: request.user!.id },
-    include: { project: { select: { id: true, title: true } } },
-  });
-  await prisma.notification.create({
-    data: {
-      userId: project.ownerId,
-      title: "Nueva solicitud de inversión",
-      message: `Recibiste una solicitud para el proyecto ${project.title}.`,
-      type: "investment_request",
-      routeDestination: "/solicitudes",
-      metadata: { investmentRequestId: item.id, projectId: project.id },
-    },
-  });
+  const item = await createInvestmentRequestUseCase.execute(input, request.user!.id);
   response.status(201).json({ data: item });
 };
 

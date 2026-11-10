@@ -52,6 +52,20 @@ export class PrismaInvestmentRequestRepository implements InvestmentRequestRepos
       data: item,
     };
   }
+  findPublishedProject(projectId: string) {
+    return prisma.project.findFirst({
+      where: { id: projectId, status: "PUBLISHED" },
+      select: { id: true, title: true, ownerId: true },
+    });
+  }
+
+  async create(input: import("../../domain/repository/investment-request.repository.js").InvestmentRequestCreateData, investorId: string) {
+    const item = await prisma.investmentRequest.create({
+      data: { ...input, investorId },
+      include: { project: { select: { id: true, title: true } } },
+    });
+    return { id: item.id, data: item };
+  }
 }
 
 export const prismaInvestmentRequestRepository = new PrismaInvestmentRequestRepository();
