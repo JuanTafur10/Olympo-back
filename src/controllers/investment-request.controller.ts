@@ -24,8 +24,13 @@ export const listInvestmentRequests: RequestHandler = async (request, response) 
     prisma.investmentRequest.findMany({
       where: activeWhere,
       include: {
-        project: { select: { id: true, title: true, imageUrl: true, ownerId: true } },
-        investor: { select: { id: true, name: true } },
+        project: {
+          select: {
+            id: true, title: true, imageUrl: true, ownerId: true, targetAmount: true,
+            owner: { select: { id: true, name: true, email: true } },
+          },
+        },
+        investor: { select: { id: true, name: true, email: true } },
       },
       orderBy: { createdAt: "desc" },
       skip: (pagination.currentPage - 1) * pagination.limit,
