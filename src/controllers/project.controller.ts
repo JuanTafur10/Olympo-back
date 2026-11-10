@@ -4,6 +4,7 @@ import { prisma } from "../config/database.js";
 import { ListProjects } from "../application/use-cases/list-projects.js";
 import { CreateProject } from "../application/use-cases/create-project.js";
 import { UpdateProject } from "../application/use-cases/update-project.js";
+import { DeleteProject } from "../application/use-cases/delete-project.js";
 import { prismaProjectRepository } from "../infrastructure/repository/prisma-project.repository.js";
 import { HttpError } from "../errors/http-error.js";
 import { uploadProjectImageFile } from "../services/storage.service.js";
@@ -12,6 +13,7 @@ import { projectCreateSchema, projectListSchema, projectUpdateSchema } from "../
 
 const createProjectUseCase = new CreateProject(prismaProjectRepository);
 const updateProjectUseCase = new UpdateProject(prismaProjectRepository);
+const deleteProjectUseCase = new DeleteProject(prismaProjectRepository);
 
 
 export const listProjects: RequestHandler = async (request, response) => {
@@ -72,17 +74,11 @@ export const updateProject: RequestHandler = async (request, response) => {
 };
 
 export const deleteProject: RequestHandler = async (request, response) => {
-  await getEditableProject(getRouteParam(request, "id"), request.user!.id, request.user!.role);
-  await prisma.$transaction(async (transaction) => {
-    await transaction.investmentRequest.updateMany({
-      where: { projectId: getRouteParam(request, "id"), status: { not: "DELETED" } },
-      data: { status: "DELETED" },
-    });
-    await transaction.project.update({
-      where: { id: getRouteParam(request, "id") },
-      data: { status: "DELETED" },
-    });
-  });
+  await deleteProjectUseCase.execute(
+    getRouteParam(request, "id"),
+    request.user!.id,
+    request.user!.role,
+  );
   response.status(204).send();
 };
 

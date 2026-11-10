@@ -70,6 +70,18 @@ export class PrismaProjectRepository implements ProjectRepository {
       include: { category: true },
     });
   }
+  async deleteSoft(id: string): Promise<void> {
+    await prisma.$transaction(async (transaction) => {
+      await transaction.investmentRequest.updateMany({
+        where: { projectId: id, status: { not: "DELETED" } },
+        data: { status: "DELETED" },
+      });
+      await transaction.project.update({
+        where: { id },
+        data: { status: "DELETED" },
+      });
+    });
+  }
 }
 
 export const prismaProjectRepository = new PrismaProjectRepository();

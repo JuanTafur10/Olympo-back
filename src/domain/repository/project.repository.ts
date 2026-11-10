@@ -17,10 +17,24 @@ export interface ProjectCreateData {
   status: "DRAFT" | "PUBLISHED";
 }
 
+export interface ProjectRecord {
+  id: string;
+  ownerId: string;
+  status: "DRAFT" | "PUBLISHED" | "CLOSED" | "DELETED";
+}
+
+export interface ProjectUpdateData {
+  title?: string;
+  description?: string;
+  categoryId?: string;
+  targetAmount?: number;
+  status?: "DRAFT" | "PUBLISHED" | "CLOSED";
+}
 export interface ProjectRepository {
   list(query: ProjectListQuery): Promise<{ data: unknown[]; total: number }>;
   hasActiveCategory(categoryId: string): Promise<boolean>;
   create(input: ProjectCreateData, ownerId: string, slug: string): Promise<unknown>;
   findForManagement(id: string): Promise<ProjectRecord | null>;
   update(id: string, input: ProjectUpdateData, slug?: string): Promise<unknown>;
+  deleteSoft(id: string): Promise<void>;
 }
