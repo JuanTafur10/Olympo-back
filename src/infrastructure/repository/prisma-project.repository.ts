@@ -89,6 +89,19 @@ export class PrismaProjectRepository implements ProjectRepository {
       include: { category: true },
     });
   }
+  async findByIdWithAccess(id: string) {
+    const project = await prisma.project.findUnique({
+      where: { id },
+      include: { category: true, owner: { select: { id: true, name: true } } },
+    });
+    if (!project) return null;
+    return {
+      id: project.id,
+      ownerId: project.ownerId,
+      status: project.status,
+      data: project,
+    };
+  }
 }
 
 export const prismaProjectRepository = new PrismaProjectRepository();

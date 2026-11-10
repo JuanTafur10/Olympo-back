@@ -1,11 +1,11 @@
 import type { RequestHandler } from "express";
 import { getRouteParam } from "../utils/route-param.js";
-import { prisma } from "../config/database.js";
 import { ListProjects } from "../application/use-cases/list-projects.js";
 import { CreateProject } from "../application/use-cases/create-project.js";
 import { UpdateProject } from "../application/use-cases/update-project.js";
 import { DeleteProject } from "../application/use-cases/delete-project.js";
 import { UploadProjectImage } from "../application/use-cases/upload-project-image.js";
+import { GetProject } from "../application/use-cases/get-project.js";
 import { prismaProjectRepository } from "../infrastructure/repository/prisma-project.repository.js";
 import { HttpError } from "../errors/http-error.js";
 import { uploadProjectImageFile } from "../services/storage.service.js";
@@ -18,6 +18,7 @@ const deleteProjectUseCase = new DeleteProject(prismaProjectRepository);
 const uploadProjectImageUseCase = new UploadProjectImage(prismaProjectRepository, {
   upload: uploadProjectImageFile,
 });
+const getProjectUseCase = new GetProject(prismaProjectRepository);
 
 export const listProjects: RequestHandler = async (request, response) => {
   const filters = projectListSchema.parse(request.query);
@@ -36,16 +37,10 @@ export const listProjects: RequestHandler = async (request, response) => {
 };
 
 export const getProject: RequestHandler = async (request, response) => {
-  const project = await prisma.project.findUnique({
-    where: { id: getRouteParam(request, "id") },
-    include: { category: true, owner: { select: { id: true, name: true } } },
-  });
-  if (!project || project.status === "DELETED") throw new HttpError(404, "No se encontró el proyecto.");
-  const canSeeDraft = request.user?.role === "ADMIN"
-    || (request.user?.role === "OWNER" && request.user.id === project.ownerId);
-  if (project.status !== "PUBLISHED" && !canSeeDraft) {
-    throw new HttpError(404, "No se encontró el proyecto.");
-  }
+  const viewer = request.user
+    ? { id: request.user.id, role: request.user.role }
+    : { role: "USER" as const };
+  const project = await getProjectUseCase.execute(getRouteParam(request, "id"), viewer);
   response.json({ data: project });
 };
 

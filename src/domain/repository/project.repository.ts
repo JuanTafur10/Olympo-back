@@ -38,4 +38,5 @@ export interface ProjectRepository {
   update(id: string, input: ProjectUpdateData, slug?: string): Promise<unknown>;
   deleteSoft(id: string): Promise<void>;
   updateImage(id: string, imageUrl: string): Promise<unknown>;
+  findByIdWithAccess(id: string): Promise<{ id: string; ownerId: string; status: "DRAFT" | "PUBLISHED" | "CLOSED" | "DELETED"; data: unknown } | null>;
 }
