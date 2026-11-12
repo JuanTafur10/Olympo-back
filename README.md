@@ -58,6 +58,11 @@ Crea un bucket llamado projects o usa otro nombre en SUPABASE_STORAGE_BUCKET. El
 
 ## Despliegue
 
+- Repositorio backend: [github.com/JuanTafur10/Olympo-back](https://github.com/JuanTafur10/Olympo-back).
+- API: [olympo-backend.onrender.com](https://olympo-backend.onrender.com).
+- Estado de la API: [GET /api/v1/health](https://olympo-backend.onrender.com/api/v1/health).
+- Frontend: [olympo-front-git-main-juan-tafur.vercel.app](https://olympo-front-git-main-juan-tafur.vercel.app).
+
 El contenedor usa las variables de .env y ejecuta las migraciones antes de iniciar la API. En un proveedor como Render o Railway, configura el build como npm ci && npm run build y el inicio como npm run db:deploy && npm start. Añade allí DATABASE_URL, DIRECT_URL, JWT_SECRET, CORS_ORIGIN y las variables de Supabase. Ejecuta npm run db:seed una vez con ADMIN_EMAIL, ADMIN_PASSWORD, SEED_USER_EMAIL y SEED_USER_PASSWORD para crear el administrador y el usuario normal.
 
 ## Reparto del trabajo
